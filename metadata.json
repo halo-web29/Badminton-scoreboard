@@ -1,0 +1,6 @@
+{
+  "name": "Badminton Scoreboard",
+  "description": "BWF-compliant badminton scoreboard with doubles court positioning, server/receiver tracking, custom color themes, and match history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
