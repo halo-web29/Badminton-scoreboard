@@ -764,8 +764,13 @@ function ServeSel({
             const isSelected = servingSide === t;
             const tColor = t === 0 ? curTheme.teamA : curTheme.teamB;
             const topHeader = !isDoubles
-              ? (t === 0 ? 'Player 1' : 'Player 2')
-              : (st.teamNames?.[t]?.trim() ? st.teamNames[t] : (t === 0 ? 'Team 1' : 'Team 2'));
+              ? (t === 0 ? 'PLAYER 1' : 'PLAYER 2')
+              : (st.teamNames?.[t]?.trim() ? st.teamNames[t].toUpperCase() : (t === 0 ? 'TEAM 1' : 'TEAM 2'));
+            const playerSubLabel = !isDoubles
+              ? (st.players[t] || `Player ${t + 1}`)
+              : (t === 0
+                  ? `${st.players[0] || 'Player 1A'} / ${st.players[1] || 'Player 1B'}`
+                  : `${st.players[2] || 'Player 2A'} / ${st.players[3] || 'Player 2B'}`);
             return (
               <button
                 key={t}
@@ -783,17 +788,19 @@ function ServeSel({
               >
                 <div
                   style={{
-                    fontSize: '12px',
-                    fontWeight: 700,
+                    fontSize: '13px',
+                    fontWeight: 800,
                     textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                    color: isSelected ? tColor.primary : C_BASE.sub,
-                    marginBottom: '4px',
+                    letterSpacing: '0.8px',
+                    color: tColor.primary,
+                    marginBottom: '6px',
                   }}
                 >
                   {topHeader}
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 700 }}>{t === 0 ? team1Label : team2Label}</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: isSelected ? tColor.text : C_BASE.text }}>
+                  {playerSubLabel}
+                </div>
                 {isSelected && (
                   <span
                     style={{
@@ -940,7 +947,7 @@ function ServeSel({
         disabled={!canStart}
         onClick={handleStart}
       >
-        Start Match 🏸
+        Start Match
       </Btn>
     </div>
   );
@@ -1573,12 +1580,12 @@ function Play({
         {/* Games Won Tracker & Undo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: curTheme.teamA.primary }}>
-              T1: {match.gamesWonA}
+            <span style={{ fontSize: '15px', fontWeight: 800, color: curTheme.teamA.primary }}>
+              {match.gamesWonA}
             </span>
-            <span style={{ fontSize: '12px', color: C_BASE.sub }}>-</span>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: curTheme.teamB.primary }}>
-              T2: {match.gamesWonB}
+            <span style={{ fontSize: '12px', color: C_BASE.sub, fontWeight: 700 }}>-</span>
+            <span style={{ fontSize: '15px', fontWeight: 800, color: curTheme.teamB.primary }}>
+              {match.gamesWonB}
             </span>
           </div>
 
@@ -1739,20 +1746,6 @@ function Play({
               >
                 <span>🏆</span> End & Complete Match
               </Btn>
-
-              {/* Discard & Exit */}
-              <Btn
-                id="discard-exit-match-btn"
-                variant="ghost"
-                size="sm"
-                style={{ width: '100%', color: C_BASE.danger, marginTop: '2px', fontSize: '12px' }}
-                onClick={() => {
-                  setShowEnd(false);
-                  goHome();
-                }}
-              >
-                Discard & Exit to Home
-              </Btn>
             </div>
           </Card>
         </div>
@@ -1794,104 +1787,127 @@ function Play({
       )}
 
       {/* Between Game Setup Modal (BWF Law 11.6 for Doubles) */}
-      {nextGameModal && nextGameModal.show && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 100,
-            padding: '20px',
-          }}
-        >
-          <Card style={{ width: '100%', maxWidth: '440px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '32px' }}>🏸</span>
-              <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '8px 0 4px' }}>
-                Game {nextGameModal.nextGameIdx} Complete!
-              </h2>
-              <p style={{ fontSize: '13px', color: C_BASE.sub, margin: 0 }}>
-                {nextGameModal.winningSide === 0 ? 'Team 1' : 'Team 2'} won the game and will serve first in Game{' '}
-                {nextGameModal.nextGameIdx + 1} (BWF Law 7.6).
-              </p>
-            </div>
+      {nextGameModal && nextGameModal.show && (() => {
+        const serverSide = nextGameModal.winningSide;
+        const receiverSide = 1 - serverSide;
+        const srvTheme = serverSide === 0 ? curTheme.teamA : curTheme.teamB;
+        const recvTheme = receiverSide === 0 ? curTheme.teamA : curTheme.teamB;
+        const srvTeamName = serverSide === 0
+          ? (match.teamNames?.[0]?.trim() || 'Team 1')
+          : (match.teamNames?.[1]?.trim() || 'Team 2');
+        const recvTeamName = receiverSide === 0
+          ? (match.teamNames?.[0]?.trim() || 'Team 1')
+          : (match.teamNames?.[1]?.trim() || 'Team 2');
 
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-                Choose Server for {nextGameModal.winningSide === 0 ? 'Team 1' : 'Team 2'}:
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+              padding: '20px',
+            }}
+          >
+            <Card style={{ width: '100%', maxWidth: '440px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <span style={{ fontSize: '32px' }}>🏸</span>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '8px 0 4px' }}>
+                  Game {nextGameModal.nextGameIdx} Complete!
+                </h2>
+                <p style={{ fontSize: '13px', color: C_BASE.sub, margin: 0 }}>
+                  <strong style={{ color: srvTheme.primary }}>{srvTeamName}</strong> won the game and will serve first in Game{' '}
+                  {nextGameModal.nextGameIdx + 1} (BWF Law 7.6).
+                </p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[0, 1].map((offset) => {
-                  const idx = nextGameModal.winningSide === 0 ? offset : offset + 2;
-                  const isSel = nextGameModal.chosenServer === idx;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => setNextGameModal({ ...nextGameModal, chosenServer: idx })}
-                      style={S({
-                        flex: 1,
-                        padding: '10px',
-                        borderRadius: '12px',
-                        border: `2px solid ${isSel ? '#4A80E8' : C_BASE.softBorder}`,
-                        background: isSel ? '#4A80E8' : C_BASE.inputBg,
-                        color: isSel ? '#fff' : C_BASE.text,
-                        fontSize: '13px',
-                      })}
-                    >
-                      {match.players[idx] || `Player ${idx + 1}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-                Choose Receiver for {nextGameModal.winningSide === 0 ? 'Team 2' : 'Team 1'}:
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: srvTheme.primary }} />
+                  <span>Choose Server for <strong style={{ color: srvTheme.text }}>{srvTeamName}</strong>:</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[0, 1].map((offset) => {
+                    const idx = serverSide === 0 ? offset : offset + 2;
+                    const isSel = nextGameModal.chosenServer === idx;
+                    return (
+                      <button
+                        key={idx}
+                        id={`next-game-server-${idx}`}
+                        onClick={() => setNextGameModal({ ...nextGameModal, chosenServer: idx })}
+                        style={S({
+                          flex: 1,
+                          padding: '10px',
+                          borderRadius: '12px',
+                          border: `2px solid ${isSel ? srvTheme.primary : C_BASE.softBorder}`,
+                          background: isSel ? srvTheme.primary : C_BASE.inputBg,
+                          color: isSel ? '#fff' : C_BASE.text,
+                          fontWeight: isSel ? 700 : 500,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        })}
+                      >
+                        {match.players[idx] || `Player ${idx + 1}`}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[0, 1].map((offset) => {
-                  const idx = nextGameModal.winningSide === 0 ? offset + 2 : offset;
-                  const isSel = nextGameModal.chosenReceiver === idx;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => setNextGameModal({ ...nextGameModal, chosenReceiver: idx })}
-                      style={S({
-                        flex: 1,
-                        padding: '10px',
-                        borderRadius: '12px',
-                        border: `2px solid ${isSel ? curTheme.teamB.primary : C_BASE.softBorder}`,
-                        background: isSel ? curTheme.teamB.primary : C_BASE.inputBg,
-                        color: isSel ? '#fff' : C_BASE.text,
-                        fontSize: '13px',
-                      })}
-                    >
-                      {match.players[idx] || `Player ${idx + 1}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
-            <Btn
-              id="confirm-next-game-btn"
-              variant="primary"
-              size="lg"
-              style={{ width: '100%' }}
-              onClick={confirmNextGame}
-            >
-              Start Game {nextGameModal.nextGameIdx + 1} 🏸
-            </Btn>
-          </Card>
-        </div>
-      )}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: recvTheme.primary }} />
+                  <span>Choose Receiver for <strong style={{ color: recvTheme.text }}>{recvTeamName}</strong>:</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[0, 1].map((offset) => {
+                    const idx = receiverSide === 0 ? offset : offset + 2;
+                    const isSel = nextGameModal.chosenReceiver === idx;
+                    return (
+                      <button
+                        key={idx}
+                        id={`next-game-receiver-${idx}`}
+                        onClick={() => setNextGameModal({ ...nextGameModal, chosenReceiver: idx })}
+                        style={S({
+                          flex: 1,
+                          padding: '10px',
+                          borderRadius: '12px',
+                          border: `2px solid ${isSel ? recvTheme.primary : C_BASE.softBorder}`,
+                          background: isSel ? recvTheme.primary : C_BASE.inputBg,
+                          color: isSel ? '#fff' : C_BASE.text,
+                          fontWeight: isSel ? 700 : 500,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        })}
+                      >
+                        {match.players[idx] || `Player ${idx + 1}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Btn
+                id="confirm-next-game-btn"
+                variant="primary"
+                size="lg"
+                style={{ width: '100%' }}
+                onClick={confirmNextGame}
+              >
+                Start Game {nextGameModal.nextGameIdx + 1}
+              </Btn>
+            </Card>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2672,6 +2688,7 @@ export default function App() {
       winScore: setup.winScore,
       plus2: setup.plus2,
       players: [setup.players[0], setup.players[1], setup.players[2], setup.players[3]],
+      teamNames: setup.teamNames ? [setup.teamNames[0], setup.teamNames[1]] : undefined,
       games: [
         { scoreA: 0, scoreB: 0, winner: -1 },
         { scoreA: 0, scoreB: 0, winner: -1 },
