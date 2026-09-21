@@ -298,6 +298,7 @@ function Setup({
   goServe,
   goHist,
   recent,
+  resumeMatch,
 }: {
   st: {
     mode: GameMode;
@@ -314,6 +315,7 @@ function Setup({
   goServe: () => void;
   goHist: () => void;
   recent: MatchState[];
+  resumeMatch?: (m: MatchState) => void;
 }) {
   const { cBase: C_BASE, curTheme, isDark, toggleDark } = useThemeContext();
   const u = (p: any) => set({ ...st, ...p });
@@ -699,12 +701,32 @@ function Setup({
                     <div style={{ fontWeight: 600, fontSize: '14px' }}>
                       {displayA} vs {displayB}
                     </div>
-                    <div style={{ fontSize: '12px', color: C_BASE.sub }}>
-                      {m.date} · {m.format}
+                    <div style={{ fontSize: '12px', color: C_BASE.sub, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{m.date} · {m.format}</span>
                       {m.isDraft && (
-                        <span style={{ marginLeft: '6px', color: '#B63620', fontWeight: 700 }}>
+                        <span style={{ color: '#B63620', fontWeight: 700 }}>
                           (Draft)
                         </span>
+                      )}
+                      {m.isDraft && resumeMatch && (
+                        <button
+                          id={`resume-recent-${m.id}`}
+                          onClick={() => resumeMatch(m)}
+                          style={S({
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            background: curTheme.teamA.primary,
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            border: 'none',
+                          })}
+                        >
+                          <PlayIcon size={10} fill="#FFFFFF" /> Resume
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1067,6 +1089,12 @@ function Play({
   const isDoubles = match.mode === 'Doubles';
   const isG3Switch = match.format === 'Best of 3' && match.winScore === 21 && match.currentGame === 2;
 
+  const isMatchCompletedRef = React.useRef(false);
+
+  useEffect(() => {
+    isMatchCompletedRef.current = false;
+  }, [match.id]);
+
   const undo = () => {
     if (!hist.length) return;
     setMatch(hist[hist.length - 1]);
@@ -1074,6 +1102,15 @@ function Play({
   };
 
   const score = (side: number) => {
+    // Prevent scoring if match is already over or in transition
+    if (
+      isMatchCompletedRef.current ||
+      match.winner >= 0 ||
+      (match.games[match.currentGame] && match.games[match.currentGame].winner >= 0)
+    ) {
+      return;
+    }
+
     // Snapshot state for robust undo
     const snap: MatchState = JSON.parse(JSON.stringify(match));
     setHist([...hist, snap]);
@@ -1138,16 +1175,18 @@ function Play({
           return;
         }
       } else {
-        // Match over
+        // Match over - immediately lock and transition to result page to prevent over-scoring
+        isMatchCompletedRef.current = true;
         const fin: MatchState = {
           ...match,
           games,
           gamesWonA: gwa,
           gamesWonB: gwb,
           winner: w,
+          isDraft: false,
         };
         setMatch(fin);
-        setTimeout(() => goComplete(fin), 350);
+        goComplete(fin);
         return;
       }
     }
@@ -1240,7 +1279,8 @@ function Play({
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          cursor: 'pointer',
+          cursor: isMatchCompletedRef.current || match.winner >= 0 ? 'default' : 'pointer',
+          pointerEvents: isMatchCompletedRef.current || match.winner >= 0 ? 'none' : 'auto',
           userSelect: 'none',
           WebkitTapHighlightColor: 'transparent',
           transition: 'border-color .15s ease, background .15s ease, box-shadow .15s ease',
@@ -2814,16 +2854,30 @@ export default function App() {
   };
 
   const goComplete = (m: MatchState) => {
-    setMatch({ ...m, groupTags: [] });
+    const completedMatch: MatchState = {
+      ...m,
+      isDraft: false,
+      groupTags: m.groupTags || [],
+    };
+    setMatch(completedMatch);
+    setMatches((prev) => {
+      const filtered = prev.filter((item) => item.id !== completedMatch.id);
+      return [completedMatch, ...filtered];
+    });
     setScreen('complete');
   };
 
   const saveMatch = () => {
     if (match) {
       const tags = groups.filter((g) => g.matches.includes(match.id)).map((g) => g.name);
+      const savedMatch: MatchState = {
+        ...match,
+        isDraft: false,
+        groupTags: tags,
+      };
       setMatches((prev) => {
-        const filtered = prev.filter((m) => m.id !== match.id);
-        return [{ ...match, groupTags: tags }, ...filtered];
+        const filtered = prev.filter((m) => m.id !== savedMatch.id);
+        return [savedMatch, ...filtered];
       });
     }
   };
@@ -2881,6 +2935,10 @@ export default function App() {
             goServe={() => setScreen('serve')}
             goHist={() => setScreen('history')}
             recent={matches.slice(0, 3)}
+            resumeMatch={(m) => {
+              setMatch(m);
+              setScreen('play');
+            }}
           />
         )}
 
