@@ -2726,6 +2726,7 @@ export default function App() {
     plus2: boolean;
     customWin: string;
     players: [string, string, string, string];
+    teamNames?: [string, string];
   }>({
     mode: 'Singles',
     format: 'Best of 3',
@@ -2853,7 +2854,7 @@ export default function App() {
           preset.players?.[2] || '',
           preset.players?.[3] || '',
         ],
-        teamNames: preset.teamNames ? [...preset.teamNames] : undefined,
+        teamNames: preset.teamNames ? [preset.teamNames[0] || '', preset.teamNames[1] || ''] : undefined,
       });
     }
     setScreen('setup');
@@ -2920,8 +2921,8 @@ export default function App() {
                 winScore: match.winScore,
                 plus2: match.plus2,
                 customWin: '',
-                players: [...match.players],
-                teamNames: match.teamNames ? [...match.teamNames] : undefined,
+                players: [match.players[0], match.players[1], match.players[2], match.players[3]],
+                teamNames: match.teamNames ? [match.teamNames[0], match.teamNames[1]] : undefined,
               });
               setScreen('serve');
             }}
