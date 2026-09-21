@@ -13,10 +13,32 @@ import {
   Sparkles,
   X,
   Play as PlayIcon,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { ColorTheme, GameMode, MatchFormat, MatchState, MatchGroup, CourtSide } from './types';
-import { C_BASE, THEMES } from './theme';
+import { C_BASE_LIGHT, C_BASE_DARK, THEMES, getBaseColors, getThemeConfig, TeamColorConfig } from './theme';
 import { winIdx, getCourtForScore, calcNextRallyState, initializeDoublesCourts } from './bwfLogic';
+
+interface ThemeContextType {
+  isDark: boolean;
+  toggleDark: () => void;
+  theme: ColorTheme;
+  setTheme: (t: ColorTheme) => void;
+  cBase: typeof C_BASE_LIGHT;
+  curTheme: { label: string; teamA: TeamColorConfig; teamB: TeamColorConfig };
+}
+
+const ThemeContext = React.createContext<ThemeContextType>({
+  isDark: false,
+  toggleDark: () => {},
+  theme: 'coral',
+  setTheme: () => {},
+  cBase: C_BASE_LIGHT,
+  curTheme: THEMES.coral,
+});
+
+export const useThemeContext = () => React.useContext(ThemeContext);
 
 const S = (extra: React.CSSProperties = {}): React.CSSProperties => ({
   borderRadius: '16px',
@@ -26,26 +48,6 @@ const S = (extra: React.CSSProperties = {}): React.CSSProperties => ({
   fontWeight: 600,
   ...extra,
 });
-
-const cardS: React.CSSProperties = {
-  background: C_BASE.card,
-  borderRadius: '20px',
-  boxShadow: C_BASE.shadow,
-  padding: '20px',
-};
-
-const inputS: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 16px',
-  borderRadius: '14px',
-  border: `1.5px solid ${C_BASE.softBorder}`,
-  background: C_BASE.inputBg,
-  fontSize: '15px',
-  fontFamily: 'inherit',
-  color: C_BASE.text,
-  outline: 'none',
-  boxSizing: 'border-box',
-};
 
 const csvE = (v: unknown) => {
   const s = String(v == null ? '' : v);
@@ -106,13 +108,14 @@ function Btn({
   style?: React.CSSProperties;
   id?: string;
 }) {
+  const { cBase, curTheme } = useThemeContext();
   const v: Record<string, React.CSSProperties> = {
-    primary: { background: '#4A80E8', color: '#fff' },
-    teamA: { background: '#4A80E8', color: '#fff' },
-    teamB: { background: '#FA6E59', color: '#fff' },
-    ghost: { background: 'transparent', color: C_BASE.text, border: `1.5px solid ${C_BASE.softBorder}` },
-    soft: { background: C_BASE.softBg, color: C_BASE.text },
-    danger: { background: C_BASE.danger, color: '#fff' },
+    primary: { background: curTheme.teamA.primary, color: '#fff' },
+    teamA: { background: curTheme.teamA.primary, color: '#fff' },
+    teamB: { background: curTheme.teamB.primary, color: '#fff' },
+    ghost: { background: 'transparent', color: cBase.text, border: `1.5px solid ${cBase.softBorder}` },
+    soft: { background: cBase.softBg, color: cBase.text },
+    danger: { background: cBase.danger, color: '#fff' },
   };
   const sz = {
     sm: { padding: '8px 14px', fontSize: '13px' },
@@ -142,8 +145,19 @@ function Btn({
 }
 
 function Card({ children, style, id }: { children: React.ReactNode; style?: React.CSSProperties; id?: string; key?: React.Key }) {
+  const { cBase, isDark } = useThemeContext();
   return (
-    <div id={id} style={{ ...cardS, ...style }}>
+    <div
+      id={id}
+      style={{
+        background: cBase.card,
+        borderRadius: '20px',
+        boxShadow: cBase.shadow,
+        padding: '20px',
+        border: isDark ? `1px solid ${cBase.border}` : 'none',
+        ...style,
+      }}
+    >
       {children}
     </div>
   );
@@ -162,25 +176,39 @@ function Input({
   style?: React.CSSProperties;
   id?: string;
 }) {
+  const { cBase, curTheme } = useThemeContext();
   return (
     <input
       id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      style={{ ...inputS, ...style }}
-      onFocus={(e) => (e.target.style.borderColor = '#4A80E8')}
-      onBlur={(e) => (e.target.style.borderColor = C_BASE.softBorder)}
+      style={{
+        width: '100%',
+        padding: '12px 16px',
+        borderRadius: '14px',
+        border: `1.5px solid ${cBase.softBorder}`,
+        background: cBase.inputBg,
+        fontSize: '15px',
+        fontFamily: 'inherit',
+        color: cBase.text,
+        outline: 'none',
+        boxSizing: 'border-box',
+        ...style,
+      }}
+      onFocus={(e) => (e.target.style.borderColor = curTheme.teamA.primary)}
+      onBlur={(e) => (e.target.style.borderColor = cBase.softBorder)}
     />
   );
 }
 
 function Toggle({ on, onClick, label, desc }: { on: boolean; onClick: () => void; label: string; desc?: string }) {
+  const { cBase, isDark } = useThemeContext();
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0' }}>
       <div>
-        <div style={{ fontWeight: 600, fontSize: '15px' }}>{label}</div>
-        {desc && <div style={{ fontSize: '13px', color: C_BASE.sub, marginTop: '2px' }}>{desc}</div>}
+        <div style={{ fontWeight: 600, fontSize: '15px', color: cBase.text }}>{label}</div>
+        {desc && <div style={{ fontSize: '13px', color: cBase.sub, marginTop: '2px' }}>{desc}</div>}
       </div>
       <div
         onClick={onClick}
@@ -188,7 +216,7 @@ function Toggle({ on, onClick, label, desc }: { on: boolean; onClick: () => void
           width: '48px',
           height: '28px',
           borderRadius: '14px',
-          background: on ? '#36A76A' : '#D9D5CC',
+          background: on ? '#36A76A' : (isDark ? '#2A374A' : '#D9D5CC'),
           cursor: 'pointer',
           transition: 'background .2s',
           position: 'relative',
@@ -214,9 +242,10 @@ function Toggle({ on, onClick, label, desc }: { on: boolean; onClick: () => void
 }
 
 function SecTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  const { cBase } = useThemeContext();
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-      <h2 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>{children}</h2>
+      <h2 style={{ fontSize: '17px', fontWeight: 700, margin: 0, color: cBase.text }}>{children}</h2>
       {action}
     </div>
   );
@@ -236,7 +265,8 @@ function PillBtn({
   id?: string;
   key?: React.Key;
 }) {
-  const ac = activeColor || '#4A80E8';
+  const { cBase, curTheme } = useThemeContext();
+  const ac = activeColor || curTheme.teamA.primary;
   return (
     <button
       id={id}
@@ -245,9 +275,9 @@ function PillBtn({
         flex: 1,
         padding: '14px',
         borderRadius: '14px',
-        border: `2px solid ${active ? ac : C_BASE.softBorder}`,
-        background: active ? ac : C_BASE.inputBg,
-        color: active ? '#fff' : C_BASE.text,
+        border: `2px solid ${active ? ac : cBase.softBorder}`,
+        background: active ? ac : cBase.inputBg,
+        color: active ? '#fff' : cBase.text,
         fontWeight: 600,
         fontSize: '15px',
       })}
@@ -285,12 +315,14 @@ function Setup({
   goHist: () => void;
   recent: MatchState[];
 }) {
+  const { cBase: C_BASE, curTheme, isDark, toggleDark } = useThemeContext();
   const u = (p: any) => set({ ...st, ...p });
-  const curTheme = THEMES[theme];
+  const coralColors = getThemeConfig('coral', isDark);
+  const greenColors = getThemeConfig('green', isDark);
 
   return (
     <div style={{ maxWidth: '580px', margin: '0 auto', padding: '20px 16px 48px' }}>
-      {/* Top Header Row with Theme Selector on Top Corner */}
+      {/* Top Header Row with Theme Selector & Dark Mode on Top Corner */}
       <div
         style={{
           display: 'flex',
@@ -306,99 +338,127 @@ function Setup({
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              background: '#4A80E8',
+              background: curTheme.teamA.primary,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '20px',
-              boxShadow: '0 4px 12px rgba(74,128,232,0.25)',
+              boxShadow: `0 4px 12px ${curTheme.teamA.primary}40`,
             }}
           >
             🏸
           </div>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, lineHeight: 1.2 }}>Badminton</h1>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, lineHeight: 1.2, color: C_BASE.text }}>Badminton</h1>
           </div>
         </div>
 
-        {/* Color Mode Option in Top Corner */}
-        <div
-          id="color-mode-picker"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            background: C_BASE.card,
-            padding: '3px',
-            borderRadius: '12px',
-            border: `1.5px solid ${C_BASE.softBorder}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            gap: '2px',
-            flexShrink: 0,
-          }}
-        >
+        {/* Right side controls: Color selection + Dark Mode Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Color Mode Option in Top Corner */}
+          <div
+            id="color-mode-picker"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: C_BASE.card,
+              padding: '3px',
+              borderRadius: '12px',
+              border: `1.5px solid ${C_BASE.softBorder}`,
+              boxShadow: C_BASE.shadow,
+              gap: '2px',
+              flexShrink: 0,
+            }}
+          >
+            <button
+              id="theme-coral-btn"
+              onClick={() => setTheme('coral')}
+              title="Soft Blue & Soft Coral"
+              style={S({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                gap: '5px',
+                padding: '6px 9px',
+                borderRadius: '9px',
+                border: theme === 'coral' ? `1.5px solid ${isDark ? 'rgba(255, 118, 96, 0.45)' : 'rgba(250, 110, 89, 0.25)'}` : '1.5px solid transparent',
+                background: theme === 'coral' ? (isDark ? 'rgba(255, 118, 96, 0.22)' : '#FFF0ED') : 'transparent',
+                color: theme === 'coral' ? (isDark ? '#FFA294' : '#B63620') : C_BASE.sub,
+                fontSize: '12px',
+                fontWeight: theme === 'coral' ? 700 : 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              })}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: coralColors.teamA.primary }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: coralColors.teamB.primary }} />
+              </span>
+              <span style={{ textAlign: 'center' }}>
+                <span className="hidden sm:inline">Blue & </span>Coral
+              </span>
+            </button>
+            <button
+              id="theme-green-btn"
+              onClick={() => setTheme('green')}
+              title="Soft Blue & Soft Green"
+              style={S({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                gap: '5px',
+                padding: '6px 9px',
+                borderRadius: '9px',
+                border: theme === 'green' ? `1.5px solid ${isDark ? 'rgba(60, 216, 133, 0.45)' : 'rgba(54, 167, 106, 0.25)'}` : '1.5px solid transparent',
+                background: theme === 'green' ? (isDark ? 'rgba(60, 216, 133, 0.22)' : '#EDF9F2') : 'transparent',
+                color: theme === 'green' ? (isDark ? '#86EFAC' : '#18683B') : C_BASE.sub,
+                fontSize: '12px',
+                fontWeight: theme === 'green' ? 700 : 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+              })}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: greenColors.teamA.primary }} />
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: greenColors.teamB.primary }} />
+              </span>
+              <span style={{ textAlign: 'center' }}>
+                <span className="hidden sm:inline">Blue & </span>Green
+              </span>
+            </button>
+          </div>
+
+          {/* Dark Mode Toggle Button */}
           <button
-            id="theme-coral-btn"
-            onClick={() => setTheme('coral')}
-            title="Soft Blue & Soft Coral"
+            id="dark-mode-toggle-btn"
+            onClick={toggleDark}
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             style={S({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              textAlign: 'center',
-              gap: '5px',
-              padding: '6px 9px',
-              borderRadius: '9px',
-              border: theme === 'coral' ? '1.5px solid rgba(250, 110, 89, 0.25)' : '1.5px solid transparent',
-              background: theme === 'coral' ? '#FFF0ED' : 'transparent',
-              color: theme === 'coral' ? '#B63620' : C_BASE.sub,
-              fontSize: '12px',
-              fontWeight: theme === 'coral' ? 700 : 500,
+              width: '38px',
+              height: '38px',
+              borderRadius: '12px',
+              background: C_BASE.card,
+              border: `1.5px solid ${C_BASE.softBorder}`,
+              boxShadow: C_BASE.shadow,
+              color: isDark ? '#FBBF24' : '#4B5563',
               cursor: 'pointer',
-              whiteSpace: 'nowrap',
               transition: 'all 0.15s ease',
-              touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent',
+              flexShrink: 0,
             })}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4A80E8' }} />
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#FA6E59' }} />
-            </span>
-            <span style={{ textAlign: 'center' }}>
-              <span className="hidden sm:inline">Blue & </span>Coral
-            </span>
-          </button>
-          <button
-            id="theme-green-btn"
-            onClick={() => setTheme('green')}
-            title="Soft Blue & Soft Green"
-            style={S({
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              gap: '5px',
-              padding: '6px 9px',
-              borderRadius: '9px',
-              border: theme === 'green' ? '1.5px solid rgba(54, 167, 106, 0.25)' : '1.5px solid transparent',
-              background: theme === 'green' ? '#EDF9F2' : 'transparent',
-              color: theme === 'green' ? '#18683B' : C_BASE.sub,
-              fontSize: '12px',
-              fontWeight: theme === 'green' ? 700 : 500,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s ease',
-              touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent',
-            })}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4A80E8' }} />
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#36A76A' }} />
-            </span>
-            <span style={{ textAlign: 'center' }}>
-              <span className="hidden sm:inline">Blue & </span>Green
-            </span>
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
       </div>
@@ -648,7 +708,7 @@ function Setup({
                       )}
                     </div>
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#4A80E8' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: curTheme.teamA.primary }}>
                     {fmtSc(m.games.slice(0, m.gamesWonA + m.gamesWonB + (m.isDraft ? 1 : 0)))}
                   </div>
                 </div>
@@ -682,7 +742,7 @@ function ServeSel({
   startMatch: (srvSide: number, srvP: number, recvP: number) => void;
   goBack: () => void;
 }) {
-  const curTheme = THEMES[theme];
+  const { cBase: C_BASE, curTheme, isDark } = useThemeContext();
   const isDoubles = st.mode === 'Doubles';
 
   // Selected serving side (0 for Team 1, 1 for Team 2)
@@ -971,7 +1031,7 @@ function Play({
   goHome: () => void;
   saveDraft: (m: MatchState) => void;
 }) {
-  const curTheme = THEMES[theme];
+  const { cBase: C_BASE, curTheme, isDark } = useThemeContext();
   const [hist, setHist] = useState<MatchState[]>([]);
   const [showEnd, setShowEnd] = useState(false);
   const [showSwitch, setShowSwitch] = useState(false);
@@ -1267,14 +1327,14 @@ function Play({
                 style={{
                   fontSize: '13px',
                   fontWeight: 700,
-                  color: teamTheme.text,
+                  color: teamTheme.primary,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   maxWidth: '120px',
                 }}
               >
-                {match.players[side] || `Player ${side + 1}`}
+                {side === 0 ? 'Player 1' : 'Player 2'}
               </span>
             </div>
             {isServingSide && (
@@ -1314,10 +1374,10 @@ function Play({
             <div
               style={{
                 height: '38px',
-                background: 'rgba(255, 255, 255, 0.72)',
+                background: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.72)',
                 borderRadius: '10px',
                 padding: '0 10px',
-                border: `1.5px solid ${isServingSide ? teamTheme.border : 'rgba(0,0,0,0.06)'}`,
+                border: `1.5px solid ${isServingSide ? teamTheme.border : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.06)')}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1344,7 +1404,7 @@ function Play({
                   fontSize: '11px',
                   fontWeight: 700,
                   color: isServingSide ? teamTheme.primary : C_BASE.sub,
-                  background: isServingSide ? teamTheme.pillBg : 'rgba(0,0,0,0.04)',
+                  background: isServingSide ? teamTheme.pillBg : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.04)'),
                   padding: '2px 7px',
                   borderRadius: '6px',
                   flexShrink: 0,
@@ -1364,7 +1424,7 @@ function Play({
               const isCurrentReceiver = match.currentReceiver === idx;
 
               let badgeText = `Court ${pCourt}`;
-              let badgeBg = 'rgba(0,0,0,0.04)';
+              let badgeBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.04)';
               let badgeColor = C_BASE.sub;
 
               if (isCurrentServer) {
@@ -1382,11 +1442,13 @@ function Play({
                   key={idx}
                   style={{
                     height: '35px',
-                    background: isCurrentServer || isCurrentReceiver ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.65)',
+                    background: isCurrentServer || isCurrentReceiver
+                      ? (isDark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.85)')
+                      : (isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.65)'),
                     borderRadius: '10px',
                     padding: '0 8px',
                     border: `1.5px solid ${
-                      isCurrentServer || isCurrentReceiver ? teamTheme.primary : 'rgba(0,0,0,0.06)'
+                      isCurrentServer || isCurrentReceiver ? teamTheme.primary : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0,0,0,0.06)')
                     }`,
                     display: 'flex',
                     alignItems: 'center',
@@ -1936,7 +1998,7 @@ function Complete({
   setGroups: React.Dispatch<React.SetStateAction<MatchGroup[]>>;
   saveMatch: () => void;
 }) {
-  const curTheme = THEMES[theme];
+  const { cBase: C_BASE, curTheme, isDark } = useThemeContext();
   const [newGrp, setNewGrp] = useState('');
   const [added, setAdded] = useState<string[]>([]);
 
@@ -2068,8 +2130,8 @@ function Complete({
                   padding: '8px 14px',
                   borderRadius: '12px',
                   border: `1.5px solid ${added.includes(g.id) ? '#36A76A' : C_BASE.softBorder}`,
-                  background: added.includes(g.id) ? '#E8F8EE' : C_BASE.inputBg,
-                  color: added.includes(g.id) ? '#18683B' : C_BASE.text,
+                  background: added.includes(g.id) ? (isDark ? 'rgba(54, 167, 106, 0.25)' : '#E8F8EE') : C_BASE.inputBg,
+                  color: added.includes(g.id) ? (isDark ? '#86EFAC' : '#18683B') : C_BASE.text,
                   fontSize: '13px',
                   cursor: added.includes(g.id) ? 'default' : 'pointer',
                   display: 'flex',
@@ -2150,6 +2212,7 @@ function History({
   resumeMatch: (m: MatchState) => void;
   goBack: () => void;
 }) {
+  const { cBase: C_BASE, curTheme, isDark } = useThemeContext();
   const [selGrp, setSelGrp] = useState<string | null>(null);
   const [newGrp, setNewGrp] = useState('');
   const [editGrp, setEditGrp] = useState<string | null>(null);
@@ -2209,8 +2272,8 @@ function History({
             {m.isDraft && (
               <span
                 style={{
-                  background: '#FFF0ED',
-                  color: '#C93B2B',
+                  background: isDark ? 'rgba(255, 118, 96, 0.2)' : '#FFF0ED',
+                  color: isDark ? '#FFA294' : '#C93B2B',
                   borderRadius: '6px',
                   padding: '1px 6px',
                   fontSize: '11px',
@@ -2230,7 +2293,7 @@ function History({
             <button
               onClick={() => resumeMatch(m)}
               style={{
-                background: '#4A80E8',
+                background: curTheme.teamA.primary,
                 border: 'none',
                 borderRadius: '10px',
                 padding: '6px 12px',
@@ -2272,14 +2335,14 @@ function History({
           </button>
         </div>
       </div>
-      <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
+      <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px', color: C_BASE.text }}>
         {m.mode === 'Singles'
           ? `${m.players[0] || 'Player 1'} vs ${m.players[1] || 'Player 2'}`
           : m.teamNames?.[0]?.trim() || m.teamNames?.[1]?.trim()
           ? `${m.teamNames?.[0]?.trim() || 'Team 1'} (${m.players[0] || '1A'} / ${m.players[1] || '1B'}) vs ${m.teamNames?.[1]?.trim() || 'Team 2'} (${m.players[2] || '2A'} / ${m.players[3] || '2B'})`
           : `${m.players[0] || '1A'} / ${m.players[1] || '1B'} vs ${m.players[2] || '2A'} / ${m.players[3] || '2B'}`}
       </div>
-      <div style={{ fontSize: '20px', fontWeight: 800, color: '#4A80E8', marginBottom: '8px' }}>
+      <div style={{ fontSize: '20px', fontWeight: 800, color: curTheme.teamA.primary, marginBottom: '8px' }}>
         {m.isDraft
           ? `In Progress · Game ${m.currentGame + 1}: ${m.games[m.currentGame]?.scoreA || 0} - ${m.games[m.currentGame]?.scoreB || 0}`
           : fmtSc(m.games.slice(0, m.gamesWonA + m.gamesWonB))}
@@ -2297,8 +2360,8 @@ function History({
             <span
               key={`t-${m.id}-${t}-${ti}`}
               style={{
-                background: '#E8F8EE',
-                color: '#18683B',
+                background: isDark ? 'rgba(54, 167, 106, 0.25)' : '#E8F8EE',
+                color: isDark ? '#86EFAC' : '#18683B',
                 borderRadius: '8px',
                 padding: '3px 8px',
                 fontSize: '11px',
@@ -2368,7 +2431,7 @@ function History({
                 <div
                   key={g.id}
                   style={{
-                    border: `1.5px solid ${selGrp === g.id ? '#4A80E8' : C_BASE.softBorder}`,
+                    border: `1.5px solid ${selGrp === g.id ? curTheme.teamA.primary : C_BASE.softBorder}`,
                     borderRadius: '14px',
                     overflow: 'hidden',
                   }}
@@ -2379,7 +2442,7 @@ function History({
                       alignItems: 'center',
                       gap: '8px',
                       padding: '12px 14px',
-                      background: selGrp === g.id ? '#F2F7FF' : C_BASE.inputBg,
+                      background: selGrp === g.id ? (isDark ? 'rgba(91, 150, 248, 0.2)' : '#F2F7FF') : C_BASE.inputBg,
                     }}
                   >
                     {editGrp === g.id ? (
@@ -2393,12 +2456,14 @@ function History({
                         autoFocus
                         style={{
                           flex: 1,
-                          border: '1.5px solid #4A80E8',
+                          border: `1.5px solid ${curTheme.teamA.primary}`,
                           borderRadius: '10px',
                           padding: '6px 10px',
                           fontSize: '14px',
                           fontFamily: 'inherit',
                           outline: 'none',
+                          background: C_BASE.card,
+                          color: C_BASE.text,
                         }}
                       />
                     ) : (
@@ -2414,6 +2479,7 @@ function History({
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                           padding: 0,
+                          color: C_BASE.text,
                         }}
                       >
                         {g.name}{' '}
@@ -2438,7 +2504,7 @@ function History({
                         background: 'none',
                         border: 'none',
                         cursor: g.matches.length ? 'pointer' : 'not-allowed',
-                        color: '#4A80E8',
+                        color: curTheme.teamA.primary,
                         padding: '4px',
                         display: 'flex',
                         opacity: g.matches.length ? 1 : 0.3,
@@ -2612,12 +2678,46 @@ export default function App() {
     return 'coral';
   });
 
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('badminton_dark_mode');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleDark = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('badminton_dark_mode', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    try {
+      document.documentElement.style.backgroundColor = isDark ? '#12161F' : '#F7F6F2';
+      document.body.style.backgroundColor = isDark ? '#12161F' : '#F7F6F2';
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch {}
+  }, [isDark]);
+
   const handleSetTheme = (t: ColorTheme) => {
     setTheme(t);
     try {
       localStorage.setItem('badminton_theme', t);
     } catch {}
   };
+
+  const cBase = getBaseColors(isDark);
+  const curTheme = getThemeConfig(theme, isDark);
 
   const [setup, setSetup] = useState<{
     mode: GameMode;
@@ -2760,89 +2860,93 @@ export default function App() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: C_BASE.bg,
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif',
-        color: C_BASE.text,
-      }}
-    >
-      {screen === 'setup' && (
-        <Setup
-          st={setup}
-          set={setSetup}
-          theme={theme}
-          setTheme={handleSetTheme}
-          goServe={() => setScreen('serve')}
-          goHist={() => setScreen('history')}
-          recent={matches.slice(0, 3)}
-        />
-      )}
+    <ThemeContext.Provider value={{ isDark, toggleDark, theme, setTheme: handleSetTheme, cBase, curTheme }}>
+      <div
+        id="app-root-container"
+        style={{
+          minHeight: '100vh',
+          background: cBase.bg,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif',
+          color: cBase.text,
+          transition: 'background-color 0.2s ease, color 0.2s ease',
+        }}
+      >
+        {screen === 'setup' && (
+          <Setup
+            st={setup}
+            set={setSetup}
+            theme={theme}
+            setTheme={handleSetTheme}
+            goServe={() => setScreen('serve')}
+            goHist={() => setScreen('history')}
+            recent={matches.slice(0, 3)}
+          />
+        )}
 
-      {screen === 'serve' && (
-        <ServeSel
-          st={setup}
-          theme={theme}
-          startMatch={startMatch}
-          goBack={() => setScreen('setup')}
-        />
-      )}
+        {screen === 'serve' && (
+          <ServeSel
+            st={setup}
+            theme={theme}
+            startMatch={startMatch}
+            goBack={() => setScreen('setup')}
+          />
+        )}
 
-      {screen === 'play' && match && (
-        <Play
-          match={match}
-          setMatch={setMatch}
-          theme={theme}
-          goComplete={goComplete}
-          goHome={() => setScreen('setup')}
-          saveDraft={saveDraft}
-        />
-      )}
+        {screen === 'play' && match && (
+          <Play
+            match={match}
+            setMatch={setMatch}
+            theme={theme}
+            goComplete={goComplete}
+            goHome={() => setScreen('setup')}
+            saveDraft={saveDraft}
+          />
+        )}
 
-      {screen === 'complete' && match && (
-        <Complete
-          match={match}
-          setMatch={setMatch}
-          theme={theme}
-          goSetup={() => {
-            saveMatch();
-            goSetup();
-          }}
-          goServe={() => {
-            saveMatch();
-            setSetup({
-              mode: match.mode,
-              format: match.format,
-              winScore: match.winScore,
-              plus2: match.plus2,
-              customWin: '',
-              players: [...match.players],
-              teamNames: match.teamNames ? [...match.teamNames] : undefined,
-            });
-            setScreen('serve');
-          }}
-          goHist={() => setScreen('history')}
-          groups={groups}
-          setGroups={setGroups}
-          saveMatch={saveMatch}
-        />
-      )}
+        {screen === 'complete' && match && (
+          <Complete
+            match={match}
+            setMatch={setMatch}
+            theme={theme}
+            goSetup={() => {
+              saveMatch();
+              goSetup();
+            }}
+            goServe={() => {
+              saveMatch();
+              setSetup({
+                mode: match.mode,
+                format: match.format,
+                winScore: match.winScore,
+                plus2: match.plus2,
+                customWin: '',
+                players: [...match.players],
+                teamNames: match.teamNames ? [...match.teamNames] : undefined,
+              });
+              setScreen('serve');
+            }}
+            goHist={() => setScreen('history')}
+            groups={groups}
+            setGroups={setGroups}
+            saveMatch={saveMatch}
+          />
+        )}
 
-      {screen === 'history' && (
-        <History
-          matches={matches}
-          setMatches={setMatches}
-          groups={groups}
-          setGroups={setGroups}
-          goSetup={goSetup}
-          resumeMatch={(m) => {
-            setMatch(m);
-            setScreen('play');
-          }}
-          goBack={() => setScreen('setup')}
-        />
-      )}
-    </div>
+        {screen === 'history' && (
+          <History
+            matches={matches}
+            setMatches={setMatches}
+            groups={groups}
+            setGroups={setGroups}
+            goSetup={goSetup}
+            resumeMatch={(m) => {
+              setMatch(m);
+              setScreen('play');
+            }}
+            goBack={() => setScreen('setup')}
+          />
+        )}
+      </div>
+    </ThemeContext.Provider>
   );
 }

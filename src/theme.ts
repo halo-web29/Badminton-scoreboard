@@ -1,6 +1,6 @@
 import { ColorTheme } from './types';
 
-export const C_BASE = {
+export const C_BASE_LIGHT = {
   bg: '#F7F6F2',
   card: '#FFFFFF',
   text: '#323232',
@@ -14,6 +14,24 @@ export const C_BASE = {
   softBg: '#F1EFEA',
   inputBg: '#FBFAF8',
 };
+
+export const C_BASE_DARK = {
+  bg: '#12161F',
+  card: '#1A2232',
+  text: '#F3F6FA',
+  sub: '#94A3B8',
+  border: '#263348',
+  softBorder: '#202A3C',
+  shadow: '0 4px 18px rgba(0,0,0,0.4)',
+  cardShadow: '0 8px 24px rgba(0,0,0,0.5)',
+  danger: '#F87171',
+  dangerBg: 'rgba(239, 68, 68, 0.16)',
+  softBg: '#1E273A',
+  inputBg: '#151C28',
+};
+
+// Default fallback export for base colors
+export const C_BASE = C_BASE_LIGHT;
 
 export interface TeamColorConfig {
   name: string;
@@ -29,7 +47,7 @@ export interface TeamColorConfig {
   recvBadge: string;
 }
 
-export const THEMES: Record<ColorTheme, { label: string; teamA: TeamColorConfig; teamB: TeamColorConfig }> = {
+export const THEMES_LIGHT: Record<ColorTheme, { label: string; teamA: TeamColorConfig; teamB: TeamColorConfig }> = {
   coral: {
     label: 'Soft Blue & Coral',
     teamA: {
@@ -89,3 +107,75 @@ export const THEMES: Record<ColorTheme, { label: string; teamA: TeamColorConfig;
     },
   },
 };
+
+// Brighter, highly luminous and vibrant team colors specifically crafted for dark mode (#12161F)
+export const THEMES_DARK: Record<ColorTheme, { label: string; teamA: TeamColorConfig; teamB: TeamColorConfig }> = {
+  coral: {
+    label: 'Electric Blue & Vibrant Coral',
+    teamA: {
+      name: 'Electric Blue',
+      primary: '#5B96F8',
+      bg: '#142136',
+      border: 'rgba(91, 150, 248, 0.35)',
+      activeBorder: '#5B96F8',
+      text: '#93C5FD',
+      pillBg: 'rgba(91, 150, 248, 0.22)',
+      serveBg: '#172740',
+      serveBadge: '#5B96F8',
+      recvBg: '#131F33',
+      recvBadge: '#93C5FD',
+    },
+    teamB: {
+      name: 'Vibrant Coral',
+      primary: '#FF7660',
+      bg: '#2B1B1E',
+      border: 'rgba(255, 118, 96, 0.35)',
+      activeBorder: '#FF7660',
+      text: '#FFA294',
+      pillBg: 'rgba(255, 118, 96, 0.22)',
+      serveBg: '#351F23',
+      serveBadge: '#FF7660',
+      recvBg: '#27181B',
+      recvBadge: '#FFA294',
+    },
+  },
+  green: {
+    label: 'Electric Blue & Vibrant Green',
+    teamA: {
+      name: 'Electric Blue',
+      primary: '#5B96F8',
+      bg: '#142136',
+      border: 'rgba(91, 150, 248, 0.35)',
+      activeBorder: '#5B96F8',
+      text: '#93C5FD',
+      pillBg: 'rgba(91, 150, 248, 0.22)',
+      serveBg: '#172740',
+      serveBadge: '#5B96F8',
+      recvBg: '#131F33',
+      recvBadge: '#93C5FD',
+    },
+    teamB: {
+      name: 'Vibrant Mint Green',
+      primary: '#3CD885',
+      bg: '#12261E',
+      border: 'rgba(60, 216, 133, 0.35)',
+      activeBorder: '#3CD885',
+      text: '#86EFAC',
+      pillBg: 'rgba(60, 216, 133, 0.22)',
+      serveBg: '#163126',
+      serveBadge: '#3CD885',
+      recvBg: '#10221A',
+      recvBadge: '#86EFAC',
+    },
+  },
+};
+
+export const THEMES = THEMES_LIGHT;
+
+export function getBaseColors(isDark: boolean) {
+  return isDark ? C_BASE_DARK : C_BASE_LIGHT;
+}
+
+export function getThemeConfig(theme: ColorTheme, isDark: boolean) {
+  return isDark ? THEMES_DARK[theme] : THEMES_LIGHT[theme];
+}
